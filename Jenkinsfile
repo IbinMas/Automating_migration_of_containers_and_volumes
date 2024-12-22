@@ -80,8 +80,9 @@ pipeline {
                     withCredentials([sshUserPrivateKey(credentialsId: 'proxmox_server', keyFileVariable: 'SSH_KEY_PATH')]) {
                         sh """
                             ssh -i $SSH_KEY_PATH -o StrictHostKeyChecking=no ${VPS_B_USER}@${VPS_B_HOST} <<EOF
-                                cd ${COMPOSE_DIR}
-                                docker compose up -d
+                            cd ${COMPOSE_DIR}
+                            docker compose up -d
+                            exit
                             EOF
                         """
                     }
