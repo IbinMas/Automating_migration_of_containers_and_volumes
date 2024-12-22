@@ -12,6 +12,7 @@ pipeline {
         SSH_USER = 'root'
         BACKUP_SCRIPT = "./scripts/migrate_containers_2.sh"
         RESTORE_SCRIPT = "./scripts/restore_volumes.sh"
+        RESTORE_SCRIPT_NAME "restore_volumes.sh"
     }
 
     stages {
@@ -65,7 +66,7 @@ pipeline {
                     echo "Executing restore_volumes.sh on VPS_B..."
                     withCredentials([sshUserPrivateKey(credentialsId: 'proxmox_server', keyFileVariable: 'SSH_KEY_PATH')]) {
                         sh """
-                            ssh -i $SSH_KEY_PATH -o StrictHostKeyChecking=no ${VPS_B_USER}@${VPS_B_HOST} 'bash ${COMPOSE_DIR}/${RESTORE_SCRIPT} ${BACKUP_DIR}'
+                            ssh -i $SSH_KEY_PATH -o StrictHostKeyChecking=no ${VPS_B_USER}@${VPS_B_HOST} 'bash ${COMPOSE_DIR}/${RESTORE_SCRIPT_NAME} ${BACKUP_DIR}'
                         """
                     }
                 }
