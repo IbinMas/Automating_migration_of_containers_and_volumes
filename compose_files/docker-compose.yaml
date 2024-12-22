@@ -46,30 +46,6 @@ services:
       - mynetwork
     command: redis-server --appendonly yes
 
-  # Python Web App with test file
-  app1:
-    image: python:3.9-alpine
-    container_name: app1
-    command: sh -c "echo 'Hello from Python Web App' > /data/index.txt && python3 -m http.server 8000"
-    ports:
-      - "8001:8000"
-    volumes:
-      - app1_data:/data
-    networks:
-      - mynetwork
-
-  # Node.js Web App with test file
-  app2:
-    image: node:16-alpine
-    container_name: app2
-    command: sh -c "echo 'Hello from Node.js Web App' > /data/index.txt && node -e \"require('http').createServer((req, res) => res.end('Hello from Node.js')).listen(8080)\""
-    ports:
-      - "8080:8080"
-    volumes:
-      - app2_data:/data
-    networks:
-      - mynetwork
-
   # PostgreSQL Database with test data
   postgres:
     image: postgres:13
@@ -109,12 +85,9 @@ volumes:
   web2_data:
   db_data:
   redis_data:
-  app1_data:
-  app2_data:
   postgres_data:
   mongo_data:
   php_data:
-  elasticsearch_data:
 
 networks:
   mynetwork:

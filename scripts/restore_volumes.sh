@@ -1,7 +1,7 @@
 #!/bin/bash
 
-BACKUP_DIR="/tmp/docker_volume_backups"
-COMPOSE_PROJECT_NAME="compose_files"  # Adjust to your compose project name
+BACKUP_DIR=$1
+COMPOSE_PROJECT_NAME=$2  # Adjust to your compose project name
 
 echo "Starting volume restoration on VPS B..."
 

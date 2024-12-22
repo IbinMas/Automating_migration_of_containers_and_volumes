@@ -1,237 +1,97 @@
-Automating the migration of 10 containers from VPS A to VPS B, along with their volumes, can be streamlined by leveraging Docker tools and scripting. Below is a step-by-step guide for your specific case:
+# **Runbook for Automating the Migration of Containers and Volumes**
+
+## **Repository Name**: Automating_migration_of_containers_and_volumes
+
+This runbook provides a step-by-step guide for automating the migration of Docker containers and their associated volumes from one VPS (VPS_A) to another (VPS_B) using Jenkins pipelines.
 
 ---
 
-## **1. Prerequisites**
-- **Access to both VPS A and VPS B**.
-- **SSH Key-based Authentication** (to enable secure, automated transfers).
-- **Docker Compose Installed** on both VPS A and VPS B.
+## **Purpose**
+To migrate containers and their volumes from VPS_A to VPS_B with minimal downtime and ensure that all data is transferred correctly. This includes the following:
+- Copying Docker Compose files.
+- Backing up and restoring Docker volumes.
+- Deploying the containers on the new host.
+- Automating the entire process via Jenkins.
 
 ---
 
-## **2. Migration Steps**
+## **Pipeline Overview**
 
-### **Step 1: Backup and Transfer Compose Files**
-Ensure all Docker Compose files are stored in `/compose` on VPS A.
+### **Jenkinsfile**
 
-1. **Copy Compose Files to VPS B**:
-   Use `rsync` or `scp` to copy the files:
-   ```bash
-   rsync -avz /compose vps_b_user@vps_b:/path/to/destination
-   ```
+The pipeline consists of the following stages:
 
----
-
-### **Step 2: Backup and Transfer Volumes**
-1. **List Volumes Used by Containers**:
-   Extract volume names from the Compose files or directly from Docker:
-   ```bash
-   docker volume ls --format '{{.Name}}'
-   ```
-
-2. **Backup Volumes**:
-   Create a script to back up all volumes in a compressed format. Save this as `backup_volumes.sh`:
-   ```bash
-   #!/bin/bash
-   BACKUP_DIR=/tmp/docker_volume_backups
-   mkdir -p $BACKUP_DIR
-
-   for volume in $(docker volume ls --format '{{.Name}}'); do
-       echo "Backing up volume: $volume"
-       docker run --rm -v $volume:/data -v $BACKUP_DIR:/backup alpine \
-           tar -czf /backup/${volume}.tar.gz -C /data .
-   done
-
-   echo "All volumes backed up in $BACKUP_DIR"
-   ```
-
-3. **Transfer Backups to VPS B**:
-   ```bash
-   rsync -avz /tmp/docker_volume_backups/ vps_b_user@vps_b:/tmp/docker_volume_backups/
-   ```
+1. **Copy Scripts**: Migrates the necessary backup and restore scripts to VPS_A and VPS_B, respectively.
+2. **Execute Migrate Script in VPS_A**: Runs the migration script to back up volumes and transfer Docker Compose files from VPS_A to VPS_B.
+3. **Execute Restore Script in VPS_B**: Restores the volumes and prepares the containers for deployment.
+4. **Clone Docker Compose Repos and Deploy Containers**: Clones the Docker Compose files and starts the containers on VPS_B.
 
 ---
 
-### **Step 3: Restore Volumes on VPS B**
-1. **Create and Restore Volumes**:
-   On VPS B, restore volumes from backups using the following script:
+## **Execution Steps**
+
+1. **Clone the repository on your Jenkins server**:
    ```bash
-   #!/bin/bash
-   BACKUP_DIR=/tmp/docker_volume_backups
-
-   for backup in $BACKUP_DIR/*.tar.gz; do
-       volume=$(basename $backup .tar.gz)
-       echo "Restoring volume: $volume"
-       docker volume create $volume
-       docker run --rm -v $volume:/data -v $BACKUP_DIR:/backup alpine \
-           tar -xzf /backup/${volume}.tar.gz -C /data
-   done
-
-   echo "All volumes restored!"
+   git clone https://your-repository-url.git
    ```
 
----
+2. **Configure Jenkins Credentials**:
+   - Add the private key for `proxmox_server` under Jenkins credentials.
 
-### **Step 4: Deploy Containers on VPS B**
-1. **Navigate to the Compose Files Directory**:
-   ```bash
-   cd /path/to/destination/compose
-   ```
+3. **Set Up the Jenkins Pipeline**:
+   - Use the provided `Jenkinsfile` in the repository to create a pipeline job.
 
-2. **Start Containers Using Compose**:
-   ```bash
-   docker-compose up -d
-   ```
+4. **Run the pipeline**:
+   - Trigger the pipeline to migrate containers and volumes.
 
----
-
-## **3. Full Automation Script**
-Here’s a full automation script for VPS A (run on VPS A):
-
-### Script: `migrate_containers.sh`
-```bash
-#!/bin/bash
-
-# Configurations
-VPS_B_USER="vps_b_user"
-VPS_B_HOST="vps_b"
-COMPOSE_DIR="/compose"
-BACKUP_DIR="/tmp/docker_volume_backups"
-
-# Step 1: Transfer Compose Files
-echo "Transferring Compose files to VPS B..."
-rsync -avz $COMPOSE_DIR $VPS_B_USER@$VPS_B_HOST:/path/to/destination
-
-# Step 2: Backup Volumes
-echo "Backing up Docker volumes..."
-mkdir -p $BACKUP_DIR
-
-for volume in $(docker volume ls --format '{{.Name}}'); do
-    echo "Backing up volume: $volume"
-    docker run --rm -v $volume:/data -v $BACKUP_DIR:/backup alpine \
-        tar -czf /backup/${volume}.tar.gz -C /data .
-done
-
-# Step 3: Transfer Volume Backups
-echo "Transferring volume backups to VPS B..."
-rsync -avz $BACKUP_DIR/ $VPS_B_USER@$VPS_B_HOST:/tmp/docker_volume_backups/
-
-echo "Migration preparation complete! Run restore scripts on VPS B."
-```
-
-On VPS B, use the **restore volumes** script and deploy containers as described earlier.
-
----
-
-## **4. Validation**
-1. **Verify Volume Restoration**:
-   Check if all volumes are restored:
-   ```bash
-   docker volume ls
-   ```
-
-2. **Verify Containers**:
-   Check if all containers are running as expected:
-   ```bash
-   docker ps
-   ```
-
-
-#### ==============================================
-
-
-
-If you directly copy the `/var/lib/docker/volumes` directory from VPS A to VPS B and then start the containers, here’s what will happen and the potential risks involved:
-
----
-
-### **What Will Happen**
-1. **Volume Data Will Be Transferred**:
-   - The data within all volumes will be available on VPS B, and any container referencing these volumes will have access to the same data as on VPS A.
-
-2. **Existing Containers Will Use the Copied Volumes**:
-   - If the volume names and container configurations are unchanged, the containers on VPS B will automatically use the copied volumes when started.
-
-3. **Docker's Internal Metadata Will Be Intact**:
-   - Docker maintains metadata about volumes in `/var/lib/docker/volumes`. Copying this directory will preserve volume IDs and mappings, so Docker on VPS B will recognize the volumes without any re-creation.
-
----
-
-### **Potential Risks**
-1. **Docker Daemon Inconsistencies**:
-   - Copying `/var/lib/docker/volumes` while the Docker daemon is running can lead to inconsistencies or corruption.
-   - **Solution**: Stop the Docker service on both VPS A and VPS B during the copy process:
+5. **Validate**:
+   - Ensure containers and volumes are running on VPS_B using the following commands:
      ```bash
-     sudo systemctl stop docker
-     rsync -avz /var/lib/docker/volumes vps_b:/var/lib/docker/volumes
-     sudo systemctl start docker
+     docker ps
+     docker volume ls
      ```
 
-2. **Volume Permissions**:
-   - File and directory permissions within volumes may mismatch on VPS B if user IDs (UIDs) and group IDs (GIDs) differ between the two servers.
-   - **Solution**: Verify and adjust permissions after transferring:
-     ```bash
-     sudo chown -R $(id -u):$(id -g) /var/lib/docker/volumes
-     ```
-
-3. **Active Containers**:
-   - If any containers are actively using volumes during the copy, data inconsistencies may arise.
-   - **Solution**: Ensure all containers on VPS A are stopped before copying:
-     ```bash
-     docker stop $(docker ps -q)
-     ```
-
-4. **Compatibility Issues**:
-   - Docker versions on VPS A and VPS B must match. Incompatible versions might result in errors or unrecognized volumes.
-   - **Solution**: Check the Docker versions on both servers:
-     ```bash
-     docker --version
-     ```
-
-5. **Hidden Dependencies**:
-   - Some containers might rely on external bind mounts or other resources outside `/var/lib/docker/volumes`. These will not be transferred.
-   - **Solution**: Inspect container configurations to identify such dependencies:
-     ```bash
-     docker inspect <container_name_or_id>
-     ```
+6. **Cleanup**:
+   - Ensure temporary directories like `/tmp/docker_volume_backups` are cleaned up post-validation.
 
 ---
 
-### **Recommended Steps**
-1. Stop Docker services on both servers:
-   ```bash
-   sudo systemctl stop docker
-   ```
+## **Validation Checklist**
 
-2. Copy the volumes directory:
-   ```bash
-   rsync -avz /var/lib/docker/volumes vps_b:/var/lib/docker/volumes
-   ```
-
-3. Start Docker on VPS B:
-   ```bash
-   sudo systemctl start docker
-   ```
-
-4. Start the containers:
-   ```bash
-   docker-compose up -d
-   ```
-
-5. Verify the containers and volumes:
-   ```bash
-   docker ps
-   docker volume ls
-   ```
+- [ ] Ensure all Docker Compose files are transferred to VPS_B.
+- [ ] Validate that all volumes are restored with correct labels.
+- [ ] Check if all containers are up and running on VPS_B.
+- [ ] Verify data integrity in restored volumes.
 
 ---
 
-### **Advantages**
-- Fast and direct.
-- No need to re-create or restore volumes manually.
+## **Key Notes**
 
-### **Drawbacks**
-- Requires stopping Docker on both servers, causing downtime.
-- Potential risks of data corruption if not handled carefully.
+- **Backup and Restore Scripts**:
+  - The repository includes scripts (`migrate_containers_2.sh` and `restore_volumes.sh`) for automating the backup and restoration of Docker volumes.
 
-If downtime is acceptable and you ensure consistency during the transfer, this approach works well. Let me know if you'd like help automating these steps!
+- **Environment Variables**:
+  - Ensure the environment variables in the `Jenkinsfile` are correctly configured to match your infrastructure.
+
+- **Docker Service Validation**:
+  - The pipeline includes steps to validate that the Docker service is running on both VPS_A and VPS_B.
+
+- **Temporary Directories**:
+  - The `/tmp/docker_volume_backups` directory is used for storing backups temporarily. Ensure this is cleaned up after migration.
+
+---
+
+## **Troubleshooting**
+
+1. **Volume Label Issues**:
+   - If volumes are not restored with the correct labels, verify the `COMPOSE_PROJECT_NAME` in the restore script matches the project name in your Docker Compose setup.
+
+2. **Permission Errors**:
+   - Ensure the SSH key has the necessary permissions and is correctly configured in Jenkins credentials.
+
+3. **Docker Compose Version Warnings**:
+   - If you encounter warnings about the `version` attribute being obsolete, consider removing the `version` field from your Docker Compose files to avoid confusion.
+
+4. **Data Integrity Issues**:
+   - Verify the integrity of restored data by inspecting the contents of the volumes after restoration.
+
