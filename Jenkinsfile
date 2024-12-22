@@ -80,7 +80,6 @@ pipeline {
                     withCredentials([sshUserPrivateKey(credentialsId: 'proxmox_server', keyFileVariable: 'SSH_KEY_PATH')]) {
                         sh """
                             ssh -i $SSH_KEY_PATH -o StrictHostKeyChecking=no ${VPS_B_USER}@${VPS_B_HOST} <<EOF
-                                git clone https://github.com/your-repo/your-compose-files.git ${COMPOSE_DIR}
                                 cd ${COMPOSE_DIR}
                                 docker-compose up -d
                             EOF
