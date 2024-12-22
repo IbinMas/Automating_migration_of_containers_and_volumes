@@ -12,7 +12,7 @@ pipeline {
         SSH_USER = 'root'
         BACKUP_SCRIPT = "./scripts/migrate_containers_2.sh"
         RESTORE_SCRIPT = "./scripts/restore_volumes.sh"
-        RESTORE_SCRIPT_NAME "restore_volumes.sh"
+        RESTORE_SCRIPT_NAME = "restore_volumes.sh"
     }
 
     stages {
