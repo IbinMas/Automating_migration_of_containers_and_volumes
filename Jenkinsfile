@@ -18,18 +18,19 @@ pipeline {
         stage('Copy Scripts') {
             parallel {
                 stage('Copy the migrate_containers.sh to VPS_A') {
-                //     steps {
-                //         script {
-                //             echo "Copying the migrate_containers.sh to VPS_A..."
-                //             withCredentials([sshUserPrivateKey(credentialsId: 'proxmox_server', keyFileVariable: 'SSH_KEY_PATH')]) {
-                //                 sh "chmod +x ${BACKUP_SCRIPT}"
-                //                 sh """
-                //                     scp -i $SSH_KEY_PATH -o StrictHostKeyChecking=no ${BACKUP_SCRIPT} ${VPS_A_USER}@${VPS_A_HOST}:${COMPOSE_DIR}
-                //                 """
-                //             }
-                //         }
-                //     }
-                // }
+                    //     steps {
+                    //         script {
+                    //             echo "Copying the migrate_containers.sh to VPS_A..."
+                    //             withCredentials([sshUserPrivateKey(credentialsId: 'proxmox_server', keyFileVariable: 'SSH_KEY_PATH')]) {
+                    //                 sh "chmod +x ${BACKUP_SCRIPT}"
+                    //                 sh """
+                    //                     scp -i $SSH_KEY_PATH -o StrictHostKeyChecking=no ${BACKUP_SCRIPT} ${VPS_A_USER}@${VPS_A_HOST}:${COMPOSE_DIR}
+                    //                 """
+                    //             }
+                    //         }
+                    //     }
+                    // }
+                }
                 stage('Copy the restore_volumes.sh to VPS_B') {
                     steps {
                         script {
@@ -39,7 +40,6 @@ pipeline {
                                 sh """
                                     scp -i $SSH_KEY_PATH -o StrictHostKeyChecking=no ${RESTORE_SCRIPT} ${VPS_B_USER}@${VPS_B_HOST}:${COMPOSE_DIR}
                                 """
-
                             }
                         }
                     }
@@ -82,7 +82,7 @@ pipeline {
                     echo "Cloning Docker Compose repos from Git..."
                     withCredentials([sshUserPrivateKey(credentialsId: 'proxmox_server', keyFileVariable: 'SSH_KEY_PATH')]) {
                         sh """
-                            #ssh -i $SSH_KEY_PATH -o StrictHostKeyChecking=no ${VPS_B_USER}@${VPS_B_HOST} 'git clone https://github.com/your-repo/your-compose-files.git ${COMPOSE_DIR}'
+                            # ssh -i $SSH_KEY_PATH -o StrictHostKeyChecking=no ${VPS_B_USER}@${VPS_B_HOST} 'git clone https://github.com/your-repo/your-compose-files.git ${COMPOSE_DIR}'
                             cd ${COMPOSE_DIR}
                             docker-compose up -d
                         """
@@ -98,7 +98,6 @@ pipeline {
         //             withCredentials([sshUserPrivateKey(credentialsId: 'proxmox_server', keyFileVariable: 'SSH_KEY_PATH')]) {
         //                 sh """
         //                     ssh -i $SSH_KEY_PATH -o StrictHostKeyChecking=no ${VPS_B_USER}@${VPS_B_HOST} <<EOF
-
         //                     EOF
         //                 """
         //             }
