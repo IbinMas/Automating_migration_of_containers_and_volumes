@@ -18,18 +18,17 @@ pipeline {
         stage('Copy Scripts') {
             parallel {
                 stage('Copy the migrate_containers.sh to VPS_A') {
-                    //     steps {
-                    //         script {
-                    //             echo "Copying the migrate_containers.sh to VPS_A..."
-                    //             withCredentials([sshUserPrivateKey(credentialsId: 'proxmox_server', keyFileVariable: 'SSH_KEY_PATH')]) {
-                    //                 sh "chmod +x ${BACKUP_SCRIPT}"
-                    //                 sh """
-                    //                     scp -i $SSH_KEY_PATH -o StrictHostKeyChecking=no ${BACKUP_SCRIPT} ${VPS_A_USER}@${VPS_A_HOST}:${COMPOSE_DIR}
-                    //                 """
-                    //             }
-                    //         }
-                    //     }
-                    // }
+                    steps {
+                        script {
+                            echo "Copying the migrate_containers.sh to VPS_A..."
+                            // withCredentials([sshUserPrivateKey(credentialsId: 'proxmox_server', keyFileVariable: 'SSH_KEY_PATH')]) {
+                            //     sh "chmod +x ${BACKUP_SCRIPT}"
+                            //     sh """
+                            //         scp -i $SSH_KEY_PATH -o StrictHostKeyChecking=no ${BACKUP_SCRIPT} ${VPS_A_USER}@${VPS_A_HOST}:${COMPOSE_DIR}
+                            //     """
+                            // }
+                        }
+                    }
                 }
                 stage('Copy the restore_volumes.sh to VPS_B') {
                     steps {
@@ -52,11 +51,8 @@ pipeline {
         //         script {
         //             echo "Executing migrate_containers.sh on VPS_A..."
         //             withCredentials([sshUserPrivateKey(credentialsId: 'proxmox_server', keyFileVariable: 'SSH_KEY_PATH')]) {
-        //                 // sh """
-        //                 //     ssh -i $SSH_KEY_PATH -o StrictHostKeyChecking=no ${VPS_A_USER}@${VPS_A_HOST} 'bash ${COMPOSE_DIR}/migrate_containers.sh'
-        //                 // """
         //                 sh """
-        //                     ssh -i $SSH_KEY -o StrictHostKeyChecking=no ${VPS_A_USER}@${VPS_A_HOST} 'bash ${COMPOSE_DIR}/${BACKUP_SCRIPT} ${VPS_B_USER} ${VPS_B_HOST} ${COMPOSE_DIR} ${BACKUP_DIR}'
+        //                     ssh -i $SSH_KEY_PATH -o StrictHostKeyChecking=no ${VPS_A_USER}@${VPS_A_HOST} 'bash ${COMPOSE_DIR}/${BACKUP_SCRIPT} ${VPS_B_USER} ${VPS_B_HOST} ${COMPOSE_DIR} ${BACKUP_DIR}'
         //                 """
         //             }
         //         }
@@ -76,59 +72,46 @@ pipeline {
             }
         }
 
-        stage('Clone Docker Compose Repos from Git') {
+        stage('Clone Docker Compose Repos from Git and Deploy Containers') {
             steps {
                 script {
-                    echo "Cloning Docker Compose repos from Git..."
+                    echo "Cloning Docker Compose repos from Git and deploying containers..."
                     withCredentials([sshUserPrivateKey(credentialsId: 'proxmox_server', keyFileVariable: 'SSH_KEY_PATH')]) {
                         sh """
-                            # ssh -i $SSH_KEY_PATH -o StrictHostKeyChecking=no ${VPS_B_USER}@${VPS_B_HOST} 'git clone https://github.com/your-repo/your-compose-files.git ${COMPOSE_DIR}'
-                            cd ${COMPOSE_DIR}
-                            docker-compose up -d
+                            ssh -i $SSH_KEY_PATH -o StrictHostKeyChecking=no ${VPS_B_USER}@${VPS_B_HOST} <<EOF
+                                git clone https://github.com/your-repo/your-compose-files.git ${COMPOSE_DIR}
+                                cd ${COMPOSE_DIR}
+                                docker-compose up -d
+                            EOF
                         """
                     }
                 }
             }
         }
-
-        // stage('Deploy the Containers in VPS_B') {
-        //     steps {
-        //         script {
-        //             echo "Deploying the containers on VPS_B..."
-        //             withCredentials([sshUserPrivateKey(credentialsId: 'proxmox_server', keyFileVariable: 'SSH_KEY_PATH')]) {
-        //                 sh """
-        //                     ssh -i $SSH_KEY_PATH -o StrictHostKeyChecking=no ${VPS_B_USER}@${VPS_B_HOST} <<EOF
-        //                     EOF
-        //                 """
-        //             }
-        //         }
-        //     }
-        // }
     }
 
-    post {
-        always {
-            echo "Cleaning up and ensuring Docker services are restarted."
-            parallel {
-                // stage('Start Docker on VPS A') {
-                //     steps {
-                //         withCredentials([sshUserPrivateKey(credentialsId: 'proxmox_server', keyFileVariable: 'SSH_KEY_PATH')]) {
-                //             sh """
-                //                 ssh -i $SSH_KEY_PATH -o StrictHostKeyChecking=no ${VPS_A_USER}@${VPS_A_HOST} 'sudo systemctl start docker || echo Docker already started'
-                //             """
-                //         }
-                //     }
-                // }
-                stage('Check service on VPS B') {
-                    steps {
-                        withCredentials([sshUserPrivateKey(credentialsId: 'proxmox_server', keyFileVariable: 'SSH_KEY_PATH')]) {
-                            sh """
-                                ssh -i $SSH_KEY_PATH -o StrictHostKeyChecking=no ${VPS_B_USER}@${VPS_B_HOST} 'docker ps'
-                            """
-                        }
-                    }
-                }
-            }
-        }
-    }
+    // post {
+    //     always {
+    //         echo "Cleaning up and ensuring Docker services are restarted."
+    //         script {
+    //             parallel (
+    //                 "Check Docker service on VPS A": {
+
+    //                     // withCredentials([sshUserPrivateKey(credentialsId: 'proxmox_server', keyFileVariable: 'SSH_KEY_PATH')]) {
+    //                     //     sh """
+    //                     //         ssh -i $SSH_KEY_PATH -o StrictHostKeyChecking=no ${VPS_A_USER}@${VPS_A_HOST} 'sudo systemctl start docker || echo Docker already started'
+    //                     //     """
+    //                     // }
+    //                 },
+    //                 "Check Docker service on VPS B": {
+    //                     withCredentials([sshUserPrivateKey(credentialsId: 'proxmox_server', keyFileVariable: 'SSH_KEY_PATH')]) {
+    //                         sh """
+    //                             ssh -i $SSH_KEY_PATH -o StrictHostKeyChecking=no ${VPS_B_USER}@${VPS_B_HOST} 'docker ps'
+    //                         """
+    //                     }
+    //                 }
+    //             )
+    //         }
+    //     }
+    // }
 }
