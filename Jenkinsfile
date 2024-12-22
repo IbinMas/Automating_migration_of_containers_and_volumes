@@ -81,7 +81,7 @@ pipeline {
                         sh """
                             ssh -i $SSH_KEY_PATH -o StrictHostKeyChecking=no ${VPS_B_USER}@${VPS_B_HOST} <<EOF
                                 cd ${COMPOSE_DIR}
-                                docker-compose up -d
+                                docker compose up -d
                             EOF
                         """
                     }
