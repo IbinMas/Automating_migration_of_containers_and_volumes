@@ -1,0 +1,121 @@
+
+services:
+  # Web Server 1 (NGINX) with sample HTML data
+  web1:
+    image: nginx:alpine
+    container_name: web1
+    ports:
+      - "8081:80"
+    volumes:
+      - web1_data:/usr/share/nginx/html
+    networks:
+      - mynetwork
+    command: sh -c "echo 'Welcome to Web1' > /usr/share/nginx/html/index.html && nginx -g 'daemon off;'"
+
+  # Web Server 2 (NGINX) with sample HTML data
+  web2:
+    image: nginx:alpine
+    container_name: web2
+    ports:
+      - "8082:80"
+    volumes:
+      - web2_data:/usr/share/nginx/html
+    networks:
+      - mynetwork
+    command: sh -c "echo 'Welcome to Web2' > /usr/share/nginx/html/index.html && nginx -g 'daemon off;'"
+
+  # MySQL Database with test data
+  db:
+    image: mysql:5.7
+    container_name: db
+    environment:
+      MYSQL_ROOT_PASSWORD: example
+    volumes:
+      - db_data:/var/lib/mysql
+    networks:
+      - mynetwork
+    command: sh -c "echo 'CREATE DATABASE test; USE test; CREATE TABLE users (id INT, name VARCHAR(255)); INSERT INTO users (id, name) VALUES (1, \"John Doe\");' > /docker-entrypoint-initdb.d/init.sql && docker-entrypoint.sh mysqld"
+
+  # Redis Cache with test data
+  redis:
+    image: redis:alpine
+    container_name: redis
+    volumes:
+      - redis_data:/data
+    networks:
+      - mynetwork
+    command: redis-server --appendonly yes
+
+  # Python Web App with test file
+  app1:
+    image: python:3.9-alpine
+    container_name: app1
+    command: sh -c "echo 'Hello from Python Web App' > /data/index.txt && python3 -m http.server 8000"
+    ports:
+      - "8001:8000"
+    volumes:
+      - app1_data:/data
+    networks:
+      - mynetwork
+
+  # Node.js Web App with test file
+  app2:
+    image: node:16-alpine
+    container_name: app2
+    command: sh -c "echo 'Hello from Node.js Web App' > /data/index.txt && node -e \"require('http').createServer((req, res) => res.end('Hello from Node.js')).listen(8080)\""
+    ports:
+      - "8080:8080"
+    volumes:
+      - app2_data:/data
+    networks:
+      - mynetwork
+
+  # PostgreSQL Database with test data
+  postgres:
+    image: postgres:13
+    container_name: postgres
+    environment:
+      POSTGRES_PASSWORD: example
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - mynetwork
+    command: sh -c "echo 'CREATE DATABASE test; CREATE TABLE users (id SERIAL PRIMARY KEY, name VARCHAR(255)); INSERT INTO users (name) VALUES (\"Jane Doe\");' > /docker-entrypoint-initdb.d/init.sql && docker-entrypoint.sh postgres"
+
+  # MongoDB with test data
+  mongo:
+    image: mongo:4.4
+    container_name: mongo
+    volumes:
+      - mongo_data:/data/db
+    networks:
+      - mynetwork
+    command: mongod --smallfiles --bind_ip 0.0.0.0
+
+  # PHP Web App with test file
+  php:
+    image: php:7.4-apache
+    container_name: php
+    ports:
+      - "8002:80"
+    volumes:
+      - php_data:/var/www/html
+    networks:
+      - mynetwork
+    command: sh -c "echo '<?php echo \"Hello from PHP Web App\"; ?>' > /var/www/html/index.php && apache2-foreground"
+
+volumes:
+  web1_data:
+  web2_data:
+  db_data:
+  redis_data:
+  app1_data:
+  app2_data:
+  postgres_data:
+  mongo_data:
+  php_data:
+  elasticsearch_data:
+
+networks:
+  mynetwork:
+    driver: bridge
