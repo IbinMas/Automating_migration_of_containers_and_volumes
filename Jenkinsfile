@@ -11,7 +11,7 @@ pipeline {
         SSH_KEY_PATH = credentials('proxmox_server')
         BACKUP_SCRIPT = "./scripts/migrate_containers_volumes.sh"
         RESTORE_SCRIPT = "./scripts/restore_volumes.sh"
-        RESTORE_SCRIPT_NAME = "migrate_containers_volumes.sh"
+        BACKUP_SCRIPT_NAME = "migrate_containers_volumes.sh"
         RESTORE_SCRIPT_NAME = "restore_volumes.sh"
         COMPOSE_PROJECT_NAME="compose_files"
     }
@@ -57,7 +57,7 @@ pipeline {
                     echo "Executing migrate script on VPS_A..."
                     withCredentials([sshUserPrivateKey(credentialsId: 'proxmox_server', keyFileVariable: 'SSH_KEY_PATH')]) {
                         sh """
-                            ssh -i $SSH_KEY_PATH -o StrictHostKeyChecking=no ${VPS_A_USER}@${VPS_A_HOST} 'bash ${COMPOSE_DIR}/${BACKUP_SCRIPT} ${VPS_B_USER} ${VPS_B_HOST} ${COMPOSE_DIR} ${BACKUP_DIR}'
+                            ssh -i $SSH_KEY_PATH -o StrictHostKeyChecking=no ${VPS_A_USER}@${VPS_A_HOST} 'bash ${COMPOSE_DIR}/${BACKUP_SCRIPT_NAME} ${VPS_B_USER} ${VPS_B_HOST} ${COMPOSE_DIR} ${BACKUP_DIR}'
                         """
                     }
                 }
