@@ -11,6 +11,7 @@ pipeline {
         SSH_KEY_PATH = credentials('proxmox_server')
         BACKUP_SCRIPT = "./scripts/migrate_containers_volumes.sh"
         RESTORE_SCRIPT = "./scripts/restore_volumes.sh"
+        RESTORE_SCRIPT_NAME = "migrate_containers_volumes.sh"
         RESTORE_SCRIPT_NAME = "restore_volumes.sh"
         COMPOSE_PROJECT_NAME="compose_files"
     }
