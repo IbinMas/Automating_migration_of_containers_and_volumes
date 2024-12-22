@@ -91,28 +91,33 @@ pipeline {
         }
     }
 
-    // post {
-    //     always {
-    //         echo "Cleaning up and ensuring Docker services are restarted."
-    //         script {
-    //             parallel (
-    //                 "Check Docker service on VPS A": {
+    post {
+        always {
+            echo "Cleaning up and ensuring Docker services are restarted."
+            script {
+                parallel (
+                    "Check Docker service on VPS A": {
 
-    //                     // withCredentials([sshUserPrivateKey(credentialsId: 'proxmox_server', keyFileVariable: 'SSH_KEY_PATH')]) {
-    //                     //     sh """
-    //                     //         ssh -i $SSH_KEY_PATH -o StrictHostKeyChecking=no ${VPS_A_USER}@${VPS_A_HOST} 'sudo systemctl start docker || echo Docker already started'
-    //                     //     """
-    //                     // }
-    //                 },
-    //                 "Check Docker service on VPS B": {
-    //                     withCredentials([sshUserPrivateKey(credentialsId: 'proxmox_server', keyFileVariable: 'SSH_KEY_PATH')]) {
-    //                         sh """
-    //                             ssh -i $SSH_KEY_PATH -o StrictHostKeyChecking=no ${VPS_B_USER}@${VPS_B_HOST} 'docker ps'
-    //                         """
-    //                     }
-    //                 }
-    //             )
-    //         }
-    //     }
-    // }
+                        // withCredentials([sshUserPrivateKey(credentialsId: 'proxmox_server', keyFileVariable: 'SSH_KEY_PATH')]) {
+                        //     sh """
+                        //         ssh -i $SSH_KEY_PATH -o StrictHostKeyChecking=no ${VPS_A_USER}@${VPS_A_HOST} 'sudo systemctl start docker || echo Docker already started'
+                        //     """
+                        // }
+                    },
+                    "Check Docker service on VPS B": {
+                        withCredentials([sshUserPrivateKey(credentialsId: 'proxmox_server', keyFileVariable: 'SSH_KEY_PATH')]) {
+                            sh """
+                                ssh -i $SSH_KEY_PATH -o StrictHostKeyChecking=no ${VPS_B_USER}@${VPS_B_HOST} <<EOF
+                                docker ps
+                                #rm -rf ${BACKUP_DIR}
+
+                                exit
+                                EOF
+                            """
+                        }
+                    }
+                )
+            }
+        }
+    }
 }
