@@ -9,7 +9,7 @@ pipeline {
         COMPOSE_DIR = "/root/Automating_migration_of_containers/compose_files"
         BACKUP_DIR = "/tmp/docker_volume_backups"
         SSH_KEY_PATH = credentials('proxmox_server')
-        BACKUP_SCRIPT = "./scripts/migrate_containers_2.sh"
+        BACKUP_SCRIPT = "./scripts/migrate_containers_volumes.sh"
         RESTORE_SCRIPT = "./scripts/restore_volumes.sh"
         RESTORE_SCRIPT_NAME = "restore_volumes.sh"
         COMPOSE_PROJECT_NAME="compose_files"
@@ -31,6 +31,7 @@ pipeline {
                         }
                     }
                 }
+                
                 stage('Copy the restore script to VPS_B') {
                     steps {
                         script {
