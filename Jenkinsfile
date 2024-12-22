@@ -108,6 +108,7 @@ pipeline {
                                 sudo systemctl start docker || echo Docker already started
                                 docker ps
                                 #rm -rf ${BACKUP_DIR}
+                                exit
                                 EOF
 
                             """
