@@ -7,8 +7,8 @@ COMPOSE_DIR=$3
 BACKUP_DIR=$4
 
 # Transfer Compose Files
-echo "Transferring Compose files to VPS B..."
-rsync -avz $COMPOSE_DIR $VPS_B_USER@$VPS_B_HOST:/
+# echo "Transferring Compose files to VPS B..."
+# rsync -avz $COMPOSE_DIR $VPS_B_USER@$VPS_B_HOST:$COMPOSE_DIR
 
 # Backup Volumes
 echo "Backing up Docker volumes..."
