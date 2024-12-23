@@ -102,19 +102,26 @@ pipeline {
                     withCredentials([sshUserPrivateKey(credentialsId: 'proxmox_server', keyFileVariable: 'SSH_KEY_PATH')]) {
                         sh """
                         ssh -i ${SSH_KEY_PATH} -o StrictHostKeyChecking=no ${VPS_B_USER}@${VPS_B_HOST} <<EOF
+                        set -e  # Exit immediately if a command fails
+                        echo "Cloning repository..."
                         git clone https://github.com/IbinMas/test-jenkins.git
                         cd test-jenkins
 
-                        # Iterate over all subdirectories
+                        echo "Checking for subdirectories..."
+                        ls -l
+
+                        # Iterate over all subdirectories and check for docker-compose.yaml
                         for dir in */; do
+                            echo "Checking directory: \$dir"
                             if [ -f "\$dir/docker-compose.yaml" ]; then
-                                echo "Deploying Docker Compose project in \$dir..."
+                                echo "Found docker-compose.yaml in \$dir. Deploying..."
                                 (cd "\$dir" && docker compose up -d)
                             else
                                 echo "No docker-compose.yaml found in \$dir. Skipping..."
                             fi
                         done
 
+                        echo "Listing running containers..."
                         docker ps
                         exit
                         EOF
@@ -123,6 +130,7 @@ pipeline {
                 }
             }
         }
+
 
 
 
