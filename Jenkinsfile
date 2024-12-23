@@ -70,7 +70,7 @@ pipeline {
                     echo "Executing restore script on VPS_B..."
                     withCredentials([sshUserPrivateKey(credentialsId: 'proxmox_server', keyFileVariable: 'SSH_KEY_PATH')]) {
                         sh """
-                            ssh -i ${SSH_KEY_PATH} -o StrictHostKeyChecking=no ${VPS_B_USER}@${VPS_B_HOST} 'bash ${COMPOSE_DIR}/${RESTORE_SCRIPT_NAME} ${BACKUP_DIR}'
+                            ssh -i ${SSH_KEY_PATH} -o StrictHostKeyChecking=no ${VPS_B_USER}@${VPS_B_HOST} 'bash ${SCRIPT_DIR}/${RESTORE_SCRIPT_NAME} ${BACKUP_DIR}'
                         """
                     }
                 }
