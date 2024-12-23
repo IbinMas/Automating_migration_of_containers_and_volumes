@@ -83,11 +83,11 @@ pipeline {
                     echo "Cloning Docker Compose repos from Git and deploying containers..."
                     withCredentials([sshUserPrivateKey(credentialsId: 'proxmox_server', keyFileVariable: 'SSH_KEY_PATH')]) {
                         sh """
-                            ssh -i $SSH_KEY_PATH -o StrictHostKeyChecking-no ${VPS_B_USER}@${VPS_B_HOST} <<EOF
+                            ssh -i ${SSH_KEY_PATH} -o StrictHostKeyChecking=no ${VPS_B_USER}@${VPS_B_HOST} <<EOF
                             git clone https://github.com/IbinMas/test-jenkins.git
                             cd ${COMPOSE_DIR}
                             for dir in ${COMPOSE_DIR}/*/; do
-                                (cd "$dir" && docker-compose up -d)
+                                (cd "\$dir" && docker-compose up -d)
                             done
                             exit
                             EOF
@@ -96,6 +96,7 @@ pipeline {
                 }
             }
         }
+
     }
 
     post {
