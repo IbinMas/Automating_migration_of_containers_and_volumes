@@ -105,7 +105,7 @@ pipeline {
                         git clone https://github.com/IbinMas/test-jenkins.git
                         cd test-jenkins
 
-                        # Iterate over all subdirectories containing docker-compose.yaml
+                        # Iterate over all subdirectories
                         for dir in */; do
                             if [ -f "\$dir/docker-compose.yaml" ]; then
                                 echo "Deploying Docker Compose project in \$dir..."
