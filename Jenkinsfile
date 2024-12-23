@@ -83,29 +83,19 @@ pipeline {
                     echo "Cloning Docker Compose repos from Git and deploying containers..."
                     withCredentials([sshUserPrivateKey(credentialsId: 'proxmox_server', keyFileVariable: 'SSH_KEY_PATH')]) {
                         sh """
-                            ssh -i ${SSH_KEY_PATH} -o StrictHostKeyChecking=no ${VPS_B_USER}@${VPS_B_HOST} <<EOF
-                            git clone https://github.com/IbinMas/test-jenkins.git
-                            cd test-jenkins
-                            for dir in */ ; do
-                                if [ -d "\$dir" ]; then
-                                    cd "\$dir"
-                                    if [ -f "docker-compose.yaml" ]; then
-                                        docker-compose up -d
-                                    elif [ -f "dockercompose.yaml" ]; then
-                                        docker-compose -f dockercompose.yaml up -d
-                                    else
-                                        echo "No docker-compose file found in \$dir"
-                                    fi
-                                    cd ..
-                                fi
-                            done
-                            exit
-                            EOF
+                        ssh -i ${SSH_KEY_PATH} -o StrictHostKeyChecking=no ${VPS_B_USER}@${VPS_B_HOST} <<EOF
+                        git clone https://github.com/IbinMas/test-jenkins.git
+                        cd test-jenkins/jenkins-srv
+                        docker compose up -d
+                        docker ps
+                        exit
+                        EOF
                         """
                     }
                 }
             }
         }
+
 
 
     }
