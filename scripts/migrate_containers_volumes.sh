@@ -13,11 +13,21 @@ rsync -avz $COMPOSE_DIR $VPS_B_USER@$VPS_B_HOST:$COMPOSE_DIR
 # Backup Volumes
 echo "Backing up Docker volumes..."
 mkdir -p $BACKUP_DIR
-docker_volumes=("compose_files_app2_data" "compose_files_app1_data" "compose_files_db_data" "compose_files_mongo_data" "compose_files_php_data" "compose_files_postgres_data" "compose_files_redis_data" "compose_files_web1_data" "compose_files_web2_data")
 
-# for volume in $(docker volume ls --format '{{.Name}}'); do
-for volume in "${docker_volumes[@]}"; do
+# Loop through each volume to backup
+for volume in $(docker volume ls --format '{{.Name}}'); do
     echo "Backing up volume: $volume"
+
+    # Inspect the volume to retrieve the project and volume labels
+    volume_info=$(docker volume inspect "$volume")
+    project_name=$(echo "$volume_info" | jq -r '.[0].Labels["com.docker.compose.project"]')
+    volume_name=$(echo "$volume_info" | jq -r '.[0].Labels["com.docker.compose.volume"]')
+
+    # Save project and volume name metadata
+    echo "$project_name" > "$BACKUP_DIR/${volume}_project_name.txt"
+    echo "$volume_name" > "$BACKUP_DIR/${volume}_volume_name.txt"
+
+    # Backup the volume data
     docker run --rm -v "$volume:/data" -v "$BACKUP_DIR:/backup" alpine \
         tar -czf "/backup/${volume}.tar.gz" -C /data .
 done
