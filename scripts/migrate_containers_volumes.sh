@@ -17,7 +17,7 @@ mkdir -p $BACKUP_DIR
 
 # Loop through each volume to backup
 # for volume in $(docker volume ls --format '{{.Name}}'); do
-docker_volumes=("jenkins_home" "uptime-kuma_uptime-kuma" "rocketchat_mongodb_data" "compose_files_web1_data" "compose_files_web2_data")
+docker_volumes=("jenkins_home" "rocketchat_mongodb_data" "compose_files_web1_data" "compose_files_web2_data")
 for volume in "${docker_volumes[@]}"; do
     echo "Backing up volume: $volume"
 
