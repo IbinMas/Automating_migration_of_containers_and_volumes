@@ -87,7 +87,7 @@ pipeline {
                             git clone https://github.com/IbinMas/test-jenkins.git
                             cd ${COMPOSE_DIR}
                             for dir in ${COMPOSE_DIR}/*/; do
-                                (cd "\$dir" && docker-compose up -d)
+                                (cd "\$dir" && docker compose up -d)
                             done
                             exit
                             EOF
