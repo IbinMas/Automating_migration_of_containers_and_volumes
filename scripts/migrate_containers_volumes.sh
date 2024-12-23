@@ -14,8 +14,11 @@ rsync -avz $COMPOSE_DIR $VPS_B_USER@$VPS_B_HOST:$COMPOSE_DIR
 echo "Backing up Docker volumes..."
 mkdir -p $BACKUP_DIR
 
+
 # Loop through each volume to backup
-for volume in $(docker volume ls --format '{{.Name}}'); do
+# for volume in $(docker volume ls --format '{{.Name}}'); do
+docker_volumes=("jenkins_home" "uptime-kuma_uptime-kuma" "rocketchat_mongodb_data" "compose_files_web1_data" "compose_files_web2_data")
+for volume in "${docker_volumes[@]}"; do
     echo "Backing up volume: $volume"
 
     # Inspect the volume to retrieve the project and volume labels

@@ -7,7 +7,8 @@ pipeline {
         VPS_A_HOST = "10.1.1.221"
         VPS_B_USER = "root"
         VPS_B_HOST = "10.1.1.100"
-        COMPOSE_DIR = "/root/Prod-Compose"
+        // COMPOSE_DIR = "/root/Prod-Compose"
+        COMPOSE_DIR = "/root/test-jenkins/v"
         BACKUP_DIR = "/tmp/docker_volume_backups"
         SSH_KEY_PATH = credentials('proxmox_server')
         BACKUP_SCRIPT = "./scripts/migrate_containers_volumes.sh"
