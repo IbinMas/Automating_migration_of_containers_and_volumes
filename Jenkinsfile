@@ -107,10 +107,10 @@ pipeline {
                         git clone https://github.com/IbinMas/test-jenkins.git
                         cd test-jenkins
 
-                        echo "Finding subdirectories with docker-compose.yaml..."
+                        echo "Finding all docker-compose.yaml files and deploying..."
                         find . -name "docker-compose.yaml" -execdir bash -c '
-                            echo "Found docker-compose.yaml in directory: \$(dirname "{}")"
-                            cd \$(dirname "{}") && docker compose up -d
+                            echo "Deploying project in directory: \$(pwd)"
+                            docker compose up -d
                         ' \\;
 
                         echo "Listing running containers..."
@@ -124,39 +124,36 @@ pipeline {
         }
 
 
-
-
     }
-
-    post {
-        always {
-            echo "Cleaning up and ensuring Docker services are restarted."
-            script {
-                parallel (
-                    "Check Docker service on VPS A": {
-                        withCredentials([sshUserPrivateKey(credentialsId: 'proxmox_server', keyFileVariable: 'SSH_KEY_PATH')]) {
-                            sh """
-                                ssh -i $SSH_KEY_PATH -o StrictHostKeyChecking=no ${VPS_A_USER}@${VPS_A_HOST} <<EOF
-                                sudo systemctl start docker || echo Docker already started
-                                docker ps
-                                exit
-                                EOF
-                            """
-                        }
-                    },
-                    "Check Docker service on VPS B": {
-                        withCredentials([sshUserPrivateKey(credentialsId: 'proxmox_server', keyFileVariable: 'SSH_KEY_PATH')]) {
-                            sh """
-                                ssh -i $SSH_KEY_PATH -o StrictHostKeyChecking-no ${VPS_B_USER}@${VPS_B_HOST} <<EOF
-                                docker volume ls
-                                docker ps
-                                exit
-                                EOF
-                            """
-                        }
+post {
+    always {
+        echo "Cleaning up and ensuring Docker services are restarted."
+        script {
+            parallel(
+                "Check Docker service on VPS A": {
+                    withCredentials([sshUserPrivateKey(credentialsId: 'proxmox_server', keyFileVariable: 'SSH_KEY_PATH')]) {
+                        sh """
+                        ssh -i ${SSH_KEY_PATH} -o StrictHostKeyChecking=no ${VPS_A_USER}@${VPS_A_HOST} <<'EOF'
+                        sudo systemctl start docker || echo "Docker is already running."
+                        docker ps
+                        exit
+                        EOF
+                        """
                     }
-                )
-            }
+                },
+                "Check Docker service on VPS B": {
+                    withCredentials([sshUserPrivateKey(credentialsId: 'proxmox_server', keyFileVariable: 'SSH_KEY_PATH')]) {
+                        sh """
+                        ssh -i ${SSH_KEY_PATH} -o StrictHostKeyChecking=no ${VPS_B_USER}@${VPS_B_HOST} <<'EOF'
+                        docker volume ls
+                        docker ps
+                        exit
+                        EOF
+                        """
+                    }
+                }
+            )
         }
     }
 }
+
