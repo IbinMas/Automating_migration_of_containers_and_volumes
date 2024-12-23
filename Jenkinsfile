@@ -1,3 +1,5 @@
+// This pipline asumes that you are using named volumes in you compose file.
+
 pipeline {
     agent any
 
@@ -118,6 +120,7 @@ pipeline {
                         withCredentials([sshUserPrivateKey(credentialsId: 'proxmox_server', keyFileVariable: 'SSH_KEY_PATH')]) {
                             sh """
                                 ssh -i $SSH_KEY_PATH -o StrictHostKeyChecking=no ${VPS_B_USER}@${VPS_B_HOST} <<EOF
+                                docker volume ls
                                 docker ps
                                 #rm -rf ${BACKUP_DIR}
 
