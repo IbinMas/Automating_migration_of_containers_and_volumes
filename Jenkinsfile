@@ -77,6 +77,24 @@ pipeline {
             }
         }
 
+        // stage('Clone Docker Compose Repos from Git and Deploy Containers') {
+        //     steps {
+        //         script {
+        //             echo "Cloning Docker Compose repos from Git and deploying containers..."
+        //             withCredentials([sshUserPrivateKey(credentialsId: 'proxmox_server', keyFileVariable: 'SSH_KEY_PATH')]) {
+        //                 sh """
+        //                 ssh -i ${SSH_KEY_PATH} -o StrictHostKeyChecking=no ${VPS_B_USER}@${VPS_B_HOST} <<EOF
+        //                 git clone https://github.com/IbinMas/test-jenkins.git
+        //                 cd test-jenkins/jenkins-srv
+        //                 docker compose up -d
+        //                 docker ps
+        //                 exit
+        //                 EOF
+        //                 """
+        //             }
+        //         }
+        //     }
+        // }
         stage('Clone Docker Compose Repos from Git and Deploy Containers') {
             steps {
                 script {
@@ -85,8 +103,18 @@ pipeline {
                         sh """
                         ssh -i ${SSH_KEY_PATH} -o StrictHostKeyChecking=no ${VPS_B_USER}@${VPS_B_HOST} <<EOF
                         git clone https://github.com/IbinMas/test-jenkins.git
-                        cd test-jenkins/jenkins-srv
-                        docker compose up -d
+                        cd test-jenkins
+
+                        # Iterate over all subdirectories containing docker-compose.yaml
+                        for dir in */; do
+                            if [ -f "\$dir/docker-compose.yaml" ]; then
+                                echo "Deploying Docker Compose project in \$dir..."
+                                (cd "\$dir" && docker compose up -d)
+                            else
+                                echo "No docker-compose.yaml found in \$dir. Skipping..."
+                            fi
+                        done
+
                         docker ps
                         exit
                         EOF
