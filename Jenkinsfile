@@ -15,6 +15,7 @@ pipeline {
         RESTORE_SCRIPT = "./scripts/restore_volumes.sh"
         BACKUP_SCRIPT_NAME = "migrate_containers_volumes.sh"
         RESTORE_SCRIPT_NAME = "restore_volumes.sh"
+        SCRIPT_DIR = "/root/scripts"
     }
 
     stages {
@@ -41,7 +42,7 @@ pipeline {
                             withCredentials([sshUserPrivateKey(credentialsId: 'proxmox_server', keyFileVariable: 'SSH_KEY_PATH')]) {
                                 sh "chmod +x ${RESTORE_SCRIPT}"
                                 sh """
-                                    scp -i $SSH_KEY_PATH -o StrictHostKeyChecking=no ${RESTORE_SCRIPT} ${VPS_B_USER}@${VPS_B_HOST}:${COMPOSE_DIR}
+                                    scp -i $SSH_KEY_PATH -o StrictHostKeyChecking=no ${RESTORE_SCRIPT} ${VPS_B_USER}@${VPS_B_HOST}:${SCRIPT_DIR}
                                 """
                             }
                         }
