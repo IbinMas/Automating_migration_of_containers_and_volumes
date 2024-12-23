@@ -1,3 +1,4 @@
+// This pipline asumes that you are using named volumes in you compose file.
 pipeline {
     agent any
 
@@ -9,7 +10,7 @@ pipeline {
         // COMPOSE_DIR = "/root/Prod-Compose"
         COMPOSE_DIR = "/root/test-jenkins"
         BACKUP_DIR = "/tmp/docker_volume_backups"
-        SSH_KEY_CREDENTIALS = credentials('proxmox_server')
+        SSH_KEY_PATH = credentials('proxmox_server')
         BACKUP_SCRIPT = "./scripts/migrate_containers_volumes.sh"
         RESTORE_SCRIPT = "./scripts/restore_volumes.sh"
         BACKUP_SCRIPT_NAME = "migrate_containers_volumes.sh"
@@ -23,10 +24,10 @@ pipeline {
                     steps {
                         script {
                             echo "Copying the migrate script to VPS_A..."
-                            withCredentials([sshUserPrivateKey(credentialsId: env.SSH_KEY_CREDENTIALS, keyFileVariable: 'SSH_KEY_PATH')]) {
+                            withCredentials([sshUserPrivateKey(credentialsId: 'proxmox_server', keyFileVariable: 'SSH_KEY_PATH')]) {
+                                sh "chmod +x ${BACKUP_SCRIPT}"
                                 sh """
-                                    chmod +x ${env.BACKUP_SCRIPT}
-                                    scp -i ${SSH_KEY_PATH} -o StrictHostKeyChecking=no ${env.BACKUP_SCRIPT} ${env.VPS_A_USER}@${env.VPS_A_HOST}:${env.COMPOSE_DIR}
+                                    scp -i $SSH_KEY_PATH -o StrictHostKeyChecking=no ${BACKUP_SCRIPT} ${VPS_A_USER}@${VPS_A_HOST}:${COMPOSE_DIR}
                                 """
                             }
                         }
@@ -37,10 +38,10 @@ pipeline {
                     steps {
                         script {
                             echo "Copying the restore script to VPS_B..."
-                            withCredentials([sshUserPrivateKey(credentialsId: env.SSH_KEY_CREDENTIALS, keyFileVariable: 'SSH_KEY_PATH')]) {
+                            withCredentials([sshUserPrivateKey(credentialsId: 'proxmox_server', keyFileVariable: 'SSH_KEY_PATH')]) {
+                                sh "chmod +x ${RESTORE_SCRIPT}"
                                 sh """
-                                    chmod +x ${env.RESTORE_SCRIPT}
-                                    scp -i ${SSH_KEY_PATH} -o StrictHostKeyChecking=no ${env.RESTORE_SCRIPT} ${env.VPS_B_USER}@${env.VPS_B_HOST}:${env.COMPOSE_DIR}
+                                    scp -i $SSH_KEY_PATH -o StrictHostKeyChecking=no ${RESTORE_SCRIPT} ${VPS_B_USER}@${VPS_B_HOST}:${COMPOSE_DIR}
                                 """
                             }
                         }
@@ -53,9 +54,9 @@ pipeline {
             steps {
                 script {
                     echo "Executing migrate script on VPS_A..."
-                    withCredentials([sshUserPrivateKey(credentialsId: env.SSH_KEY_CREDENTIALS, keyFileVariable: 'SSH_KEY_PATH')]) {
+                    withCredentials([sshUserPrivateKey(credentialsId: 'proxmox_server', keyFileVariable: 'SSH_KEY_PATH')]) {
                         sh """
-                            ssh -i ${SSH_KEY_PATH} -o StrictHostKeyChecking=no ${env.VPS_A_USER}@${env.VPS_A_HOST} 'bash ${env.COMPOSE_DIR}/${env.BACKUP_SCRIPT_NAME} ${env.VPS_B_USER} ${env.VPS_B_HOST} ${env.COMPOSE_DIR} ${env.BACKUP_DIR}'
+                            ssh -i $SSH_KEY_PATH -o StrictHostKeyChecking=no ${VPS_A_USER}@${VPS_A_HOST} 'bash ${COMPOSE_DIR}/${BACKUP_SCRIPT_NAME} ${VPS_B_USER} ${VPS_B_HOST} ${COMPOSE_DIR} ${BACKUP_DIR}'
                         """
                     }
                 }
@@ -66,9 +67,9 @@ pipeline {
             steps {
                 script {
                     echo "Executing restore script on VPS_B..."
-                    withCredentials([sshUserPrivateKey(credentialsId: env.SSH_KEY_CREDENTIALS, keyFileVariable: 'SSH_KEY_PATH')]) {
+                    withCredentials([sshUserPrivateKey(credentialsId: 'proxmox_server', keyFileVariable: 'SSH_KEY_PATH')]) {
                         sh """
-                            ssh -i ${SSH_KEY_PATH} -o StrictHostKeyChecking=no ${env.VPS_B_USER}@${env.VPS_B_HOST} 'bash ${env.COMPOSE_DIR}/${env.RESTORE_SCRIPT_NAME} ${env.BACKUP_DIR}'
+                            ssh -i ${SSH_KEY_PATH} -o StrictHostKeyChecking=no ${VPS_B_USER}@${VPS_B_HOST} 'bash ${COMPOSE_DIR}/${RESTORE_SCRIPT_NAME} ${BACKUP_DIR}'
                         """
                     }
                 }
@@ -79,10 +80,10 @@ pipeline {
             steps {
                 script {
                     echo "Cloning Docker Compose repos from Git and deploying containers..."
-                    withCredentials([sshUserPrivateKey(credentialsId: env.SSH_KEY_CREDENTIALS, keyFileVariable: 'SSH_KEY_PATH')]) {
+                    withCredentials([sshUserPrivateKey(credentialsId: 'proxmox_server', keyFileVariable: 'SSH_KEY_PATH')]) {
                         sh """
-                            ssh -i ${SSH_KEY_PATH} -o StrictHostKeyChecking=no ${env.VPS_B_USER}@${env.VPS_B_HOST} <<EOF
-                            for dir in ${env.COMPOSE_DIR}/*/; do
+                            ssh -i $SSH_KEY_PATH -o StrictHostKeyChecking-no ${VPS_B_USER}@${VPS_B_HOST} <<EOF
+                            for dir in ${COMPOSE_DIR}/*/; do
                                 (cd "$dir" && docker-compose up -d)
                             done
                             exit
@@ -100,9 +101,9 @@ pipeline {
             script {
                 parallel (
                     "Check Docker service on VPS A": {
-                        withCredentials([sshUserPrivateKey(credentialsId: env.SSH_KEY_CREDENTIALS, keyFileVariable: 'SSH_KEY_PATH')]) {
+                        withCredentials([sshUserPrivateKey(credentialsId: 'proxmox_server', keyFileVariable: 'SSH_KEY_PATH')]) {
                             sh """
-                                ssh -i ${SSH_KEY_PATH} -o StrictHostKeyChecking=no ${env.VPS_A_USER}@${env.VPS_A_HOST} <<EOF
+                                ssh -i $SSH_KEY_PATH -o StrictHostKeyChecking=no ${VPS_A_USER}@${VPS_A_HOST} <<EOF
                                 sudo systemctl start docker || echo Docker already started
                                 docker ps
                                 exit
@@ -111,9 +112,9 @@ pipeline {
                         }
                     },
                     "Check Docker service on VPS B": {
-                        withCredentials([sshUserPrivateKey(credentialsId: env.SSH_KEY_CREDENTIALS, keyFileVariable: 'SSH_KEY_PATH')]) {
+                        withCredentials([sshUserPrivateKey(credentialsId: 'proxmox_server', keyFileVariable: 'SSH_KEY_PATH')]) {
                             sh """
-                                ssh -i ${SSH_KEY_PATH} -o StrictHostKeyChecking=no ${env.VPS_B_USER}@${env.VPS_B_HOST} <<EOF
+                                ssh -i $SSH_KEY_PATH -o StrictHostKeyChecking-no ${VPS_B_USER}@${VPS_B_HOST} <<EOF
                                 docker volume ls
                                 docker ps
                                 exit
