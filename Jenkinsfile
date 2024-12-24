@@ -115,7 +115,7 @@ pipeline {
                         set -e
                         echo "Cloning repository..."
                         git clone https://github.com/IbinMas/test-jenkins.git || echo "Repository already cloned."
-                        cd test-jenkins
+                        cd ${COMPOSE_DIR}
 
                         echo "Deploying all projects with docker-compose.yaml..."
                         find . -name "docker-compose.yaml" -execdir bash -c '
