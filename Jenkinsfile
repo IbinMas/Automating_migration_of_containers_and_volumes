@@ -1,4 +1,3 @@
-// This pipline asumes that you are using named volumes in you compose file.
 pipeline {
     agent any
 
@@ -7,7 +6,6 @@ pipeline {
         VPS_A_HOST = "10.1.1.221"
         VPS_B_USER = "root"
         VPS_B_HOST = "10.1.1.100"
-        // COMPOSE_DIR = "/root/Prod-Compose"
         COMPOSE_DIR = "/root/test-jenkins"
         BACKUP_DIR = "/tmp/docker_volume_backups"
         SSH_KEY_PATH = credentials('proxmox_server')
@@ -19,14 +17,44 @@ pipeline {
     }
 
     stages {
-        stage('Copy Scripts') {
+        stage('Prepare Servers') {
             parallel {
-                stage('Copy the migrate script to VPS_A') {
+                stage('Prepare VPS_A') {
                     steps {
                         script {
-                            echo "Copying the migrate script to VPS_A..."
+                            echo "Ensuring directories exist on VPS_A..."
                             withCredentials([sshUserPrivateKey(credentialsId: 'proxmox_server', keyFileVariable: 'SSH_KEY_PATH')]) {
-                                sh "chmod +x ${BACKUP_SCRIPT}"
+                                sh """
+                                    ssh -i $SSH_KEY_PATH -o StrictHostKeyChecking=no ${VPS_A_USER}@${VPS_A_HOST} 'mkdir -p ${COMPOSE_DIR}'
+                                """
+                            }
+                        }
+                    }
+                }
+
+                stage('Prepare VPS_B') {
+                    steps {
+                        script {
+                            echo "Ensuring directories exist on VPS_B..."
+                            withCredentials([sshUserPrivateKey(credentialsId: 'proxmox_server', keyFileVariable: 'SSH_KEY_PATH')]) {
+                                sh """
+                                    ssh -i $SSH_KEY_PATH -o StrictHostKeyChecking=no ${VPS_B_USER}@${VPS_B_HOST} 'mkdir -p ${SCRIPT_DIR}'
+                                """
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        stage('Copy Scripts') {
+            parallel {
+                stage('Copy Backup Script to VPS_A') {
+                    steps {
+                        script {
+                            echo "Copying backup script to VPS_A..."
+                            sh "chmod +x ${BACKUP_SCRIPT}"
+                            withCredentials([sshUserPrivateKey(credentialsId: 'proxmox_server', keyFileVariable: 'SSH_KEY_PATH')]) {
                                 sh """
                                     scp -i $SSH_KEY_PATH -o StrictHostKeyChecking=no ${BACKUP_SCRIPT} ${VPS_A_USER}@${VPS_A_HOST}:${COMPOSE_DIR}
                                 """
@@ -35,12 +63,12 @@ pipeline {
                     }
                 }
 
-                stage('Copy the restore script to VPS_B') {
+                stage('Copy Restore Script to VPS_B') {
                     steps {
                         script {
-                            echo "Copying the restore script to VPS_B..."
+                            echo "Copying restore script to VPS_B..."
+                            sh "chmod +x ${RESTORE_SCRIPT}"
                             withCredentials([sshUserPrivateKey(credentialsId: 'proxmox_server', keyFileVariable: 'SSH_KEY_PATH')]) {
-                                sh "chmod +x ${RESTORE_SCRIPT}"
                                 sh """
                                     scp -i $SSH_KEY_PATH -o StrictHostKeyChecking=no ${RESTORE_SCRIPT} ${VPS_B_USER}@${VPS_B_HOST}:${SCRIPT_DIR}
                                 """
@@ -51,10 +79,10 @@ pipeline {
             }
         }
 
-        stage('Execute migrate script in VPS_A') {
+        stage('Execute Backup on VPS_A') {
             steps {
                 script {
-                    echo "Executing migrate script on VPS_A..."
+                    echo "Running backup script on VPS_A..."
                     withCredentials([sshUserPrivateKey(credentialsId: 'proxmox_server', keyFileVariable: 'SSH_KEY_PATH')]) {
                         sh """
                             ssh -i $SSH_KEY_PATH -o StrictHostKeyChecking=no ${VPS_A_USER}@${VPS_A_HOST} 'bash ${COMPOSE_DIR}/${BACKUP_SCRIPT_NAME} ${VPS_B_USER} ${VPS_B_HOST} ${COMPOSE_DIR} ${BACKUP_DIR}'
@@ -64,10 +92,10 @@ pipeline {
             }
         }
 
-        stage('Execute restore script in VPS_B') {
+        stage('Execute Restore on VPS_B') {
             steps {
                 script {
-                    echo "Executing restore script on VPS_B..."
+                    echo "Running restore script on VPS_B..."
                     withCredentials([sshUserPrivateKey(credentialsId: 'proxmox_server', keyFileVariable: 'SSH_KEY_PATH')]) {
                         sh """
                             ssh -i ${SSH_KEY_PATH} -o StrictHostKeyChecking=no ${VPS_B_USER}@${VPS_B_HOST} 'bash ${SCRIPT_DIR}/${RESTORE_SCRIPT_NAME} ${BACKUP_DIR}'
@@ -77,37 +105,19 @@ pipeline {
             }
         }
 
-        // stage('Clone Docker Compose Repos from Git and Deploy Containers') {
-        //     steps {
-        //         script {
-        //             echo "Cloning Docker Compose repos from Git and deploying containers..."
-        //             withCredentials([sshUserPrivateKey(credentialsId: 'proxmox_server', keyFileVariable: 'SSH_KEY_PATH')]) {
-        //                 sh """
-        //                 ssh -i ${SSH_KEY_PATH} -o StrictHostKeyChecking=no ${VPS_B_USER}@${VPS_B_HOST} <<EOF
-        //                 git clone https://github.com/IbinMas/test-jenkins.git
-        //                 cd test-jenkins/jenkins-srv
-        //                 docker compose up -d
-        //                 docker ps
-        //                 exit
-        //                 EOF
-        //                 """
-        //             }
-        //         }
-        //     }
-        // }
-        stage('Clone Docker Compose Repos from Git and Deploy Containers') {
+        stage('Deploy Docker Compose Projects on VPS_B') {
             steps {
                 script {
-                    echo "Cloning Docker Compose repos from Git and deploying containers..."
+                    echo "Cloning and deploying Docker Compose projects..."
                     withCredentials([sshUserPrivateKey(credentialsId: 'proxmox_server', keyFileVariable: 'SSH_KEY_PATH')]) {
                         sh """
                         ssh -i ${SSH_KEY_PATH} -o StrictHostKeyChecking=no ${VPS_B_USER}@${VPS_B_HOST} <<EOF
                         set -e
                         echo "Cloning repository..."
-                        git clone https://github.com/IbinMas/test-jenkins.git
+                        git clone https://github.com/IbinMas/test-jenkins.git || echo "Repository already cloned."
                         cd test-jenkins
 
-                        echo "Finding all docker-compose.yaml files and deploying..."
+                        echo "Deploying all projects with docker-compose.yaml..."
                         find . -name "docker-compose.yaml" -execdir bash -c '
                             echo "Deploying project in directory: \$(pwd)"
                             docker compose up -d
@@ -115,45 +125,42 @@ pipeline {
 
                         echo "Listing running containers..."
                         docker ps
-                        exit
                         EOF
                         """
                     }
                 }
             }
         }
-
-
     }
-post {
-    always {
-        echo "Cleaning up and ensuring Docker services are restarted."
-        script {
-            parallel(
-                "Check Docker service on VPS A": {
-                    withCredentials([sshUserPrivateKey(credentialsId: 'proxmox_server', keyFileVariable: 'SSH_KEY_PATH')]) {
-                        sh """
-                        ssh -i ${SSH_KEY_PATH} -o StrictHostKeyChecking=no ${VPS_A_USER}@${VPS_A_HOST} <<'EOF'
-                        sudo systemctl start docker || echo "Docker is already running."
-                        docker ps
-                        exit
-                        EOF
-                        """
+
+    post {
+        always {
+            echo "Ensuring Docker services are running..."
+            script {
+                parallel(
+                    "Docker Service on VPS_A": {
+                        withCredentials([sshUserPrivateKey(credentialsId: 'proxmox_server', keyFileVariable: 'SSH_KEY_PATH')]) {
+                            sh """
+                                ssh -i ${SSH_KEY_PATH} -o StrictHostKeyChecking=no ${VPS_A_USER}@${VPS_A_HOST} <<'EOF'
+                                sudo systemctl start docker || echo "Docker already running."
+                                docker ps
+                                EOF
+                            """
+                        }
+                    },
+                    "Docker Service on VPS_B": {
+                        withCredentials([sshUserPrivateKey(credentialsId: 'proxmox_server', keyFileVariable: 'SSH_KEY_PATH')]) {
+                            sh """
+                                ssh -i ${SSH_KEY_PATH} -o StrictHostKeyChecking=no ${VPS_B_USER}@${VPS_B_HOST} <<'EOF'
+                                sudo systemctl start docker || echo "Docker already running."
+                                docker volume ls
+                                docker ps
+                                EOF
+                            """
+                        }
                     }
-                },
-                "Check Docker service on VPS B": {
-                    withCredentials([sshUserPrivateKey(credentialsId: 'proxmox_server', keyFileVariable: 'SSH_KEY_PATH')]) {
-                        sh """
-                        ssh -i ${SSH_KEY_PATH} -o StrictHostKeyChecking=no ${VPS_B_USER}@${VPS_B_HOST} <<'EOF'
-                        docker volume ls
-                        docker ps
-                        exit
-                        EOF
-                        """
-                    }
-                }
-            )
+                )
+            }
         }
     }
 }
-
