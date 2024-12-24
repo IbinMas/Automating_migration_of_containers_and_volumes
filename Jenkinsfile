@@ -125,6 +125,7 @@ pipeline {
 
                         echo "Listing running containers..."
                         docker ps
+                        exit
                         EOF
                         """
                     }
@@ -141,21 +142,23 @@ pipeline {
                     "Docker Service on VPS_A": {
                         withCredentials([sshUserPrivateKey(credentialsId: 'proxmox_server', keyFileVariable: 'SSH_KEY_PATH')]) {
                             sh """
-                                ssh -i ${SSH_KEY_PATH} -o StrictHostKeyChecking=no ${VPS_A_USER}@${VPS_A_HOST} <<'EOF'
-                                sudo systemctl start docker || echo "Docker already running."
-                                docker ps
-                                EOF
+                            ssh -i ${SSH_KEY_PATH} -o StrictHostKeyChecking=no ${VPS_A_USER}@${VPS_A_HOST} <<'EOF'
+                            sudo systemctl start docker || echo "Docker already running."
+                            docker ps
+                            exit
+                            EOF
                             """
                         }
                     },
                     "Docker Service on VPS_B": {
                         withCredentials([sshUserPrivateKey(credentialsId: 'proxmox_server', keyFileVariable: 'SSH_KEY_PATH')]) {
                             sh """
-                                ssh -i ${SSH_KEY_PATH} -o StrictHostKeyChecking=no ${VPS_B_USER}@${VPS_B_HOST} <<'EOF'
-                                sudo systemctl start docker || echo "Docker already running."
-                                docker volume ls
-                                docker ps
-                                EOF
+                            ssh -i ${SSH_KEY_PATH} -o StrictHostKeyChecking=no ${VPS_B_USER}@${VPS_B_HOST} <<'EOF'
+                            sudo systemctl start docker || echo "Docker already running."
+                            docker volume ls
+                            docker ps
+                            exit
+                            EOF
                             """
                         }
                     }
