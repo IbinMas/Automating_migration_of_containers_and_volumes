@@ -1,3 +1,10 @@
+
+// This pipeline asumes:
+// 1. all docker volumes are named volume type
+// 2. Add the private key for `proxmox_server` under Jenkins credentials.
+// 3. server_A can perform rsync with server_B
+// 4. you Ensure jq is Installed on server_A
+
 pipeline {
     agent any
 
@@ -13,9 +20,11 @@ pipeline {
         RESTORE_SCRIPT = "./scripts/restore_volumes.sh"
         BACKUP_SCRIPT_NAME = "migrate_containers_volumes.sh"
         RESTORE_SCRIPT_NAME = "restore_volumes.sh"
-        SCRIPT_DIR = "/root/scripts"
-    }
+        VOLUMES_LIST = "jenkins_home rocketchat_mongodb_data compose_files_web1_data compose_files_web2_data"
+        // SCRIPT_DIR = "/root/scripts"
 
+    }
+    
     stages {
         stage('Prepare Servers') {
             parallel {
@@ -25,7 +34,7 @@ pipeline {
                             echo "Ensuring directories exist on VPS_A..."
                             withCredentials([sshUserPrivateKey(credentialsId: 'proxmox_server', keyFileVariable: 'SSH_KEY_PATH')]) {
                                 sh """
-                                    ssh -i $SSH_KEY_PATH -o StrictHostKeyChecking=no ${VPS_A_USER}@${VPS_A_HOST} 'mkdir -p ${COMPOSE_DIR}'
+                                    ssh -i $SSH_KEY_PATH -o StrictHostKeyChecking=no ${VPS_A_USER}@${VPS_A_HOST} 'mkdir -p ${BACKUP_DIR}'
                                 """
                             }
                         }
@@ -38,7 +47,9 @@ pipeline {
                             echo "Ensuring directories exist on VPS_B..."
                             withCredentials([sshUserPrivateKey(credentialsId: 'proxmox_server', keyFileVariable: 'SSH_KEY_PATH')]) {
                                 sh """
-                                    ssh -i $SSH_KEY_PATH -o StrictHostKeyChecking=no ${VPS_B_USER}@${VPS_B_HOST} 'mkdir -p ${SCRIPT_DIR}'
+                                    ssh -i $SSH_KEY_PATH -o StrictHostKeyChecking=no ${VPS_B_USER}@${VPS_B_HOST} 'mkdir -p ${BACKUP_DIR}'
+                                    ssh -i $SSH_KEY_PATH -o StrictHostKeyChecking=no ${VPS_B_USER}@${VPS_B_HOST} 'mkdir -p ${COMPOSE_DIR}'
+
                                 """
                             }
                         }
@@ -56,7 +67,7 @@ pipeline {
                             sh "chmod +x ${BACKUP_SCRIPT}"
                             withCredentials([sshUserPrivateKey(credentialsId: 'proxmox_server', keyFileVariable: 'SSH_KEY_PATH')]) {
                                 sh """
-                                    scp -i $SSH_KEY_PATH -o StrictHostKeyChecking=no ${BACKUP_SCRIPT} ${VPS_A_USER}@${VPS_A_HOST}:${COMPOSE_DIR}
+                                    scp -i $SSH_KEY_PATH -o StrictHostKeyChecking=no ${BACKUP_SCRIPT} ${VPS_A_USER}@${VPS_A_HOST}:${BACKUP_DIR}
                                 """
                             }
                         }
@@ -70,7 +81,7 @@ pipeline {
                             sh "chmod +x ${RESTORE_SCRIPT}"
                             withCredentials([sshUserPrivateKey(credentialsId: 'proxmox_server', keyFileVariable: 'SSH_KEY_PATH')]) {
                                 sh """
-                                    scp -i $SSH_KEY_PATH -o StrictHostKeyChecking=no ${RESTORE_SCRIPT} ${VPS_B_USER}@${VPS_B_HOST}:${SCRIPT_DIR}
+                                    scp -i $SSH_KEY_PATH -o StrictHostKeyChecking=no ${RESTORE_SCRIPT} ${VPS_B_USER}@${VPS_B_HOST}:${BACKUP_DIR}
                                 """
                             }
                         }
@@ -85,7 +96,7 @@ pipeline {
                     echo "Running backup script on VPS_A..."
                     withCredentials([sshUserPrivateKey(credentialsId: 'proxmox_server', keyFileVariable: 'SSH_KEY_PATH')]) {
                         sh """
-                            ssh -i $SSH_KEY_PATH -o StrictHostKeyChecking=no ${VPS_A_USER}@${VPS_A_HOST} 'bash ${COMPOSE_DIR}/${BACKUP_SCRIPT_NAME} ${VPS_B_USER} ${VPS_B_HOST} ${COMPOSE_DIR} ${BACKUP_DIR}'
+                            ssh -i ${SSH_KEY_PATH} -o StrictHostKeyChecking=no ${VPS_A_USER}@${VPS_A_HOST} 'bash ${BACKUP_DIR}/${BACKUP_SCRIPT_NAME} ${VPS_B_USER} ${VPS_B_HOST} ${COMPOSE_DIR} ${BACKUP_DIR} "${VOLUMES_LIST}"'
                         """
                     }
                 }
@@ -98,7 +109,7 @@ pipeline {
                     echo "Running restore script on VPS_B..."
                     withCredentials([sshUserPrivateKey(credentialsId: 'proxmox_server', keyFileVariable: 'SSH_KEY_PATH')]) {
                         sh """
-                            ssh -i ${SSH_KEY_PATH} -o StrictHostKeyChecking=no ${VPS_B_USER}@${VPS_B_HOST} 'bash ${SCRIPT_DIR}/${RESTORE_SCRIPT_NAME} ${BACKUP_DIR}'
+                            ssh -i ${SSH_KEY_PATH} -o StrictHostKeyChecking=no ${VPS_B_USER}@${VPS_B_HOST} 'bash ${BACKUP_DIR}/${RESTORE_SCRIPT_NAME} ${BACKUP_DIR}'
                         """
                     }
                 }
@@ -114,7 +125,7 @@ pipeline {
                         ssh -i ${SSH_KEY_PATH} -o StrictHostKeyChecking=no ${VPS_B_USER}@${VPS_B_HOST} <<EOF
                         set -e
                         echo "Cloning repository..."
-                        git clone https://github.com/IbinMas/test-jenkins.git || echo "Repository already cloned."
+                        # git clone https://github.com/IbinMas/test-jenkins.git || echo "Repository already cloned."
                         cd ${COMPOSE_DIR}
 
                         echo "Deploying all projects with docker-compose.yaml..."
@@ -136,7 +147,7 @@ pipeline {
 
     post {
         always {
-            echo "Ensuring Docker services are running..."
+            echo "Clean Up and Ensuring Docker services are running..."
             script {
                 parallel(
                     "Docker Service on VPS_A": {
@@ -145,6 +156,7 @@ pipeline {
                             ssh -i ${SSH_KEY_PATH} -o StrictHostKeyChecking=no ${VPS_A_USER}@${VPS_A_HOST} <<'EOF'
                             sudo systemctl start docker || echo "Docker already running."
                             docker ps
+                            rm -rf ${BACKUP_DIR}
                             exit
                             EOF
                             """
@@ -157,6 +169,7 @@ pipeline {
                             sudo systemctl start docker || echo "Docker already running."
                             docker volume ls
                             docker ps
+                            rm -rf ${BACKUP_DIR}
                             exit
                             EOF
                             """

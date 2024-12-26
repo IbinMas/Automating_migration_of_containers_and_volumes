@@ -5,20 +5,16 @@ VPS_B_USER=$1
 VPS_B_HOST=$2
 COMPOSE_DIR=$3
 BACKUP_DIR=$4
+VOLUMES_LIST=${VOLUMES_LIST}
 
 # Transfer Compose Files
-# echo "Transferring Compose files to VPS B..."
-# rsync -avz $COMPOSE_DIR $VPS_B_USER@$VPS_B_HOST:$COMPOSE_DIR
+echo "Transferring Compose files to VPS B..."
+rsync -avz $COMPOSE_DIR $VPS_B_USER@$VPS_B_HOST:$COMPOSE_DIR
 
 # Backup Volumes
 echo "Backing up Docker volumes..."
-mkdir -p $BACKUP_DIR
-
-
 # Loop through each volume to backup
-# for volume in $(docker volume ls --format '{{.Name}}'); do
-docker_volumes=("jenkins_home" "rocketchat_mongodb_data" "compose_files_web1_data" "compose_files_web2_data")
-for volume in "${docker_volumes[@]}"; do
+for volume in $VOLUMES_LIST; do
     echo "Backing up volume: $volume"
 
     # Inspect the volume to retrieve the project and volume labels
