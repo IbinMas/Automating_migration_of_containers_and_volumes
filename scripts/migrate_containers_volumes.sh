@@ -5,10 +5,12 @@ VPS_B_USER=$1
 VPS_B_HOST=$2
 COMPOSE_DIR=$3
 BACKUP_DIR=$4
-VOLUMES_LIST=$5
+# Read VOLUMES_LIST from temp file 
+VOLUMES_LIST=$(cat ${BACKUP_DIR}/volumes_list.txt)
+
+echo "VOLUMES_LIST passed to the script: $VOLUMES_LIST"
 
 # Convert VOLUMES_LIST string to array 
-echo "VOLUMES_LIST passed to the script: $VOLUMES_LIST"
 IFS=' ' read -r -a VOLUME_ARRAY <<< "$VOLUMES_LIST"
 
 # Transfer Compose Files

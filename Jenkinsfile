@@ -68,6 +68,8 @@ pipeline {
                             withCredentials([sshUserPrivateKey(credentialsId: 'proxmox_server', keyFileVariable: 'SSH_KEY_PATH')]) {
                                 sh """
                                     scp -i $SSH_KEY_PATH -o StrictHostKeyChecking=no ${BACKUP_SCRIPT} ${VPS_A_USER}@${VPS_A_HOST}:${BACKUP_DIR}
+                                    echo "${env.VOLUMES_LIST}" > /tmp/volumes_list.txt 
+                                    scp -i ${SSH_KEY_PATH} -o StrictHostKeyChecking=no /tmp/volumes_list.txt ${env.VPS_A_USER}@${env.VPS_A_HOST}:${env.BACKUP_DIR}
                                 """
                             }
                         }
@@ -96,7 +98,7 @@ pipeline {
                     echo "Running backup script on VPS_A..."
                     withCredentials([sshUserPrivateKey(credentialsId: 'proxmox_server', keyFileVariable: 'SSH_KEY_PATH')]) {
                         sh """
-                            ssh -i ${SSH_KEY_PATH} -o StrictHostKeyChecking=no ${VPS_A_USER}@${VPS_A_HOST} 'export VOLUMES_LIST="${env.VOLUMES_LIST}" && bash ${BACKUP_DIR}/${BACKUP_SCRIPT_NAME} ${VPS_B_USER} ${VPS_B_HOST} ${COMPOSE_DIR} ${BACKUP_DIR}'
+                            ssh -i ${SSH_KEY_PATH} -o StrictHostKeyChecking=no ${VPS_A_USER}@${VPS_A_HOST} 'bash ${BACKUP_DIR}/${BACKUP_SCRIPT_NAME} ${VPS_B_USER} ${VPS_B_HOST} ${COMPOSE_DIR} ${BACKUP_DIR}'
                         """
                     }
                 }
