@@ -8,6 +8,7 @@ BACKUP_DIR=$4
 VOLUMES_LIST=$5
 
 # Convert VOLUMES_LIST string to array 
+echo "VOLUMES_LIST passed to the script: $VOLUMES_LIST"
 IFS=' ' read -r -a VOLUME_ARRAY <<< "$VOLUMES_LIST"
 
 # Transfer Compose Files
