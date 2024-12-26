@@ -7,6 +7,9 @@ COMPOSE_DIR=$3
 BACKUP_DIR=$4
 VOLUMES_LIST=$5
 
+# Convert VOLUMES_LIST string to array 
+IFS=' ' read -r -a VOLUME_ARRAY <<< "$VOLUMES_LIST"
+
 # Transfer Compose Files
 echo "Transferring Compose files to VPS B..."
 rsync -avz $COMPOSE_DIR $VPS_B_USER@$VPS_B_HOST:$COMPOSE_DIR
