@@ -5,7 +5,7 @@ VPS_B_USER=$1
 VPS_B_HOST=$2
 COMPOSE_DIR=$3
 BACKUP_DIR=$4
-VOLUMES_LIST=${VOLUMES_LIST}
+VOLUMES_LIST=$5
 
 # Transfer Compose Files
 echo "Transferring Compose files to VPS B..."
